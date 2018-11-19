@@ -95,7 +95,7 @@ for i in range(-78,117):
     <p>rot19 yields the flag</p>
     <h2>music</h2>
     <p>another image with text in it. this time each channel has different periodicity (r with period 32, g with period 38, d with period 66)</p>
-    <p>taking the first <period> pixels of each channel and rendering them as ascii, we get a function in three parts:</p>
+    <p>taking the first |period| pixels of each channel and rendering them as ascii, we get a function in three parts:</p>
     <p>r: <code>(t<<3)*[8/9,1,9/8,6/5,4/3,3/2,0]</code></p>
 
     <p>g: <code>[[0xd2d2c7,0xce4087,0xca32c7,0x8e4008]</code></p>
@@ -105,11 +105,11 @@ for i in range(-78,117):
     <p>assembling them in rgb order (the only order that yields a valid function), we get:</p>
 
     <pre>
-        (t<<3)*[8/9,1,9/8,6/5,4/3,3/2,0][[0xd2d2c7,0xce4087,0xca32c7,0x8e4008][t>>14&3.1]>>(0x3dbe4687>>((t>>10&15)>9?18:t>>10&15)*3&7.1)*3&7.1]
-        </pre>
+(t<<3)*[8/9,1,9/8,6/5,4/3,3/2,0][[0xd2d2c7,0xce4087,0xca32c7,0x8e4008][t>>14&3.1]>>(0x3dbe4687>>((t>>10&15)>9?18:t>>10&15)*3&7.1)*3&7.1]
+</pre>
     <p>ignoring the leading (t&lt;&lt;3)*, the function is structured as a list of 7 fractions and a complicated access pattern dependent on a free variable t</p>
-    <p>bearing the name of the challenge in mind, each fraction probably represents a musical note within a scale; 1 is the tonic, 3/2 is perfect fifth, and so on (see [the table on wikipedia](https://en.wikipedia.org/wiki/Interval_(music))). the
-        only non-obvious fractions are 8/9 and 0. taken as a literally, 8/9 would be the minor 7th of octave below the root (a minor 7th in the same octave would be 16/9). 0 is probably a rest (silence).</p>
+    <p>bearing the name of the challenge in mind, each fraction probably represents a musical note within a scale; 1 is the tonic, 3/2 is perfect fifth, and so on (see <a href="https://en.wikipedia.org/wiki/Interval_(music)">the table on wikipedia</a>). the
+        only non-obvious fractions are 8/9 and 0. taken literally, 8/9 would be the minor 7th of octave below the root (a minor 7th in the same octave would be 16/9). 0 is probably a rest (silence).</p>
     <p>so by iterating t (time) and evaluating the function at each point, we should retrieve a sequence of notes and rests corresponding to the intervals of a melody.</p>
     <p><a href="music">we can translate the code to js and play it</a></p>
     <p>we use name of song in flag format as flag</p>
