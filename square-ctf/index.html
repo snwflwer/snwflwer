@@ -1,40 +1,59 @@
 <html>
-    <head>
-        <title>❄️🌸</title>
-        <style>
-            @import url('https://fonts.googleapis.com/css?family=Fira+Mono');
-            body {
-                width: 512px;
-                margin: 32px auto;
-                font-family: Fira Mono;
-            }
-            a {
-                text-decoration: none;
-                color: #174ba6;
-            }
-            a:hover {
-                text-decoration: underline;
-                text-decoration-color: #f7c6ff;
-            }
-            pre {
-                padding: 0.5em 1em;
-                white-space: pre-wrap;
-                background: black;
-                color: #ddd;
-                border-radius: 0.75em;
-            }
-			li {
-				margin-bottom: 1em;
-			}
-        </style>
-    </head>
-    <body>
-        <h1>square-ctf</h1>
-        <a href="https://squarectf.com/">squarectf.com</a>
-        <h2>C1: dot-n-dash</h2>
-        <p>straightforward problem to reverse engineer encoding format of message</p>
-        <p>encoder is:</p>
-        <pre>
+
+<head>
+    <title>❄️🌸</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css?family=Fira+Mono');
+
+        body {
+            width: 512px;
+            margin: 32px auto;
+            font-family: Fira Mono;
+            line-height: 1.5;
+        }
+
+        a {
+            text-decoration: none;
+            color: #174ba6;
+        }
+
+        a:hover {
+            text-decoration: underline;
+            text-decoration-color: #f7c6ff;
+        }
+
+        pre {
+            padding: 0.5em 1em;
+            margin: 0.5em;
+            white-space: pre-wrap;
+            background: black;
+            color: white;
+        }
+
+        code {
+            padding: 0.15em 1em;
+            display: inline-block;
+            background: black;
+            color: white;
+        }
+
+        li {
+            margin-bottom: 1em;
+        }
+
+        blockquote {
+            background: #f0f0f0;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>square-ctf</h1>
+    <a href="https://squarectf.com/">squarectf.com</a>
+    <h2>C1: dot-n-dash</h2>
+    <p>straightforward problem to reverse engineer encoding format of message</p>
+    <p>encoder is:</p>
+    <pre>
 function _encode(input) {
   var a=[];
   for (var i=0; i<input.length; i++) {
@@ -61,13 +80,13 @@ function _encode(input) {
   return r;
 }
         </pre>
-        <p>first part reads through all bits of each char and maps to number</p>
-        <p>second part shuffles list of numbers around (order does not matter)</p>
-        <p>third part encodes as dots and dashes</p>
-        <p>only "tricky" part of decoder is retrieving chars from numbers</p>
-        <p>but number for char i bit j is 1 + j + (input.length - 1 - i) * 8. so lowest order bits tell you j and higher order tell you i</p>
-        <p>so write lazy decoder:</p>
-        <pre>
+    <p>first part reads through all bits of each char and maps to number</p>
+    <p>second part shuffles list of numbers around (order does not matter)</p>
+    <p>third part encodes as dots and dashes</p>
+    <p>only "tricky" part of decoder is retrieving chars from numbers</p>
+    <p>but number for char i bit j is 1 + j + (input.length - 1 - i) * 8. so lowest order bits tell you j and higher order tell you i</p>
+    <p>so write lazy decoder:</p>
+    <pre>
 function _decode(input) {
     let nums = [];
     let num_dashes = 0;
@@ -104,14 +123,14 @@ function _decode(input) {
     return output;
 }
         </pre>
-        <h2>C3: shredded</h2>
-        <p>problem is folder of 27 vertically sliced images</p> 
-        <p>after connecting images, clear they come from qr code (version 1)</p>
-        <p>space of valid qr codes much smaller than 27!, so we eliminate options</p>
-        <p>first fix in place alignment codes, whitespace, then timing codes</p>
-        <p>using format codes and faint grey pattern inside alignment boxes, can narrow down to manually checkable set of options</p>
-        <p>but more reliable to write python:</p>
-        <pre>
+    <h2>C3: shredded</h2>
+    <p>problem is folder of 27 vertically sliced images</p>
+    <p>after connecting images, clear they come from qr code (version 1)</p>
+    <p>space of valid qr codes much smaller than 27!, so we eliminate options</p>
+    <p>first fix in place alignment codes, whitespace, then timing codes</p>
+    <p>using format codes and faint grey pattern inside alignment boxes, can narrow down to manually checkable set of options</p>
+    <p>but more reliable to write python:</p>
+    <pre>
 from pyzbar.pyzbar import decode
 #...
 ordering = [5,6,25,16,2,15,26,3,23,19,21,10,20,7,14,1,4,22,24,18,8]
@@ -132,16 +151,20 @@ def attempt(current):
 attempt([])
 #...
         </pre>
-		<h2>C8: captcha</h2>
-		<p>This problem asks you to solve a randomized math expression under a time limit. The expression is too long to type out, and uses a randomized character -> font mapping, meaning that a successful solution must quickly convert the expression into a parsable form before solving it.</p>
-		<p>Since the character glyphs are the exact same each time, it's fairly straightforward to solve this in vanilla javascript:</p>
-		<ul>
-		<li>Read the string from the p tag in the DOM</li>
-		<li>For each character, look it up visually, using font rendering in an off-screen canvas element. For most characters this is as simple as looking up ctx.measureText(character).width in a precomputed table, but for character pairs that share widths like + and * we can instead render them to a canvas and use ctx.getImageData to retrieve a unique identifier. Doing this for each unique character in the string gets us a lookup table for translating characters to their original versions.</li>
-		<li>Translate the string to a "normal" math string using the lookup table.</li>
-		<li>replace(/([0-9]+)/g,"$1n"); to turn add an "n" suffix to all integer literals, so they're treated as bigints and we can get an exact result</li>
-		<li>Call eval on the string to get an exact result, and submit it</li>
-		</ul>
-		<p>(executed just by pasting into the chrome dev console)</p>
-    </body>
+    <h2>C8: captcha</h2>
+    <p>This problem asks you to solve a randomized math expression under a time limit. The expression is too long to type out, and uses a randomized character -> font mapping, meaning that a successful solution must quickly convert the expression
+        into a parsable form before solving it.</p>
+    <p>Since the character glyphs are the exact same each time, it's fairly straightforward to solve this in vanilla javascript:</p>
+    <ul>
+        <li>Read the string from the p tag in the DOM</li>
+        <li>For each character, look it up visually, using font rendering in an off-screen canvas element. For most characters this is as simple as looking up ctx.measureText(character).width in a precomputed table, but for character pairs that
+            share widths like + and * we can instead render them to a canvas and use ctx.getImageData to retrieve a unique identifier. Doing this for each unique character in the string gets us a lookup table for translating characters to their
+            original versions.</li>
+        <li>Translate the string to a "normal" math string using the lookup table.</li>
+        <li>replace(/([0-9]+)/g,"$1n"); to turn add an "n" suffix to all integer literals, so they're treated as bigints and we can get an exact result</li>
+        <li>Call eval on the string to get an exact result, and submit it</li>
+    </ul>
+    <p>(executed just by pasting into the chrome dev console)</p>
+</body>
+
 </html>
